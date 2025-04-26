@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Api\AnswerKeyController;
+use App\Http\Controllers\Api\SubjectController as ApiSubjectController;
 use App\Http\Controllers\AuthenticationController;
 use App\Http\Controllers\QuickCheckerController;
 use Illuminate\Http\Request;
@@ -20,4 +22,19 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::post('quick-check', [QuickCheckerController::class, 'quickCheck']);
+
+    Route::prefix('subjects')
+        ->controller(ApiSubjectController::class)
+        ->group(function () {
+            Route::get('', 'index');
+            Route::post('', 'store');
+            Route::put('{subject}', 'update');
+            Route::delete('{subject}', 'destroy');
+        });
+
+    Route::prefix('answer-keys')
+        ->controller(AnswerKeyController::class)
+        ->group(function () {
+            Route::post('', 'store');
+        });
 });
