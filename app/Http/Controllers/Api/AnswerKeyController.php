@@ -3,10 +3,13 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\AnswerKeyFullResource;
 use App\Models\AnswerKey;
+use App\Models\Snapshot;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class AnswerKeyController extends Controller
 {
@@ -15,7 +18,14 @@ class AnswerKeyController extends Controller
      */
     public function index()
     {
-        //
+        /** @var User $user */
+        $user = Auth::user();
+        $answerKeys = $user->answerKeys()
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(fn($a) => $a->basic());
+
+        return $answerKeys;
     }
 
     /**
@@ -44,15 +54,41 @@ class AnswerKeyController extends Controller
             'attachments.*' => 'image|max:10240',
         ]);
 
+        DB::beginTransaction();
+
         try {
+
             $result = $user->answerKeys()->create([
                 'name' => $request->name,
                 'subject_id' => $request->subject,
                 'mode' => $request->useQuestionnaire ? 'USE_QUESTIONNAIRE' : 'ENFORCE_KEY',
             ]);
 
-            return response()->json($result->basic(), 201);
+            $attachments = [];
+
+            foreach ($request->file('attachments', []) as $file) {
+                $path = $file->store('answer-keys', 'public');
+                $attachments[] = [
+                    'attachment_type' => AnswerKey::class,
+                    'attachment_id' => $result->id,
+                    'path' => $path,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+            }
+
+            Snapshot::insert($attachments);
+
+            DB::commit();
+
+            $data = [
+                'basic' => $result->basic(), // default
+                'full' =>  new AnswerKeyFullResource($result),
+            ];
+
+            return response()->json($data, 201);
         } catch (\Exception $e) {
+            DB::rollBack();
             return sendErrorResponse($e);
         }
     }
@@ -78,6 +114,12 @@ class AnswerKeyController extends Controller
      */
     public function destroy(AnswerKey $answerKey)
     {
-        //
+        $answerKey->delete();
+        return response()->noContent();
+    }
+
+    public function fullDetails(AnswerKey $answerKey)
+    {
+        return response()->json(new AnswerKeyFullResource($answerKey));
     }
 }

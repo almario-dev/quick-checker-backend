@@ -16,6 +16,19 @@ class Snapshot extends Model
         'metadata' => 'array'
     ];
 
+    protected $hidden = [
+        'metadata',
+        'attachment_type',
+        'attachment_id',
+        'created_at',
+        'updated_at',
+    ];
+
+    public function getPathAttribute($value)
+    {
+        return $value ? url('storage/' . $value) : null;
+    }
+
     public function attachment(): MorphTo
     {
         return $this->morphTo();
