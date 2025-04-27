@@ -30,6 +30,7 @@ class AnswerKey extends Model
     {
         return [
             'id' => $this->id,
+            'name' => $this->name,
             'subject' => $this->subject->basicResource(),
             'mode' => $this->mode,
             'score' => $this->score,
