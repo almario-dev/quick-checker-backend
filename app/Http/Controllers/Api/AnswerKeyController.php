@@ -7,6 +7,7 @@ use App\Http\Resources\AnswerKeyFullResource;
 use App\Models\AnswerKey;
 use App\Models\Snapshot;
 use App\Models\User;
+use App\Rules\IsExistsRule;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -37,18 +38,16 @@ class AnswerKeyController extends Controller
         $user = Auth::user();
 
         $request->validate([
-            'subject' => 'required|exists:subjects,id',
+            'subject' => [
+                'required',
+                'exists:subjects,id',
+                new IsExistsRule($user->subjects(), null, false, 'The selected subject isn\'t associated with your account.')
+            ],
             'useQuestionnaire' => 'required|boolean',
             'name' => [
                 'required',
                 'string',
-                function ($attribute, $value, $fail) use ($user) {
-                    $exists = $user->subjects()->where('name', $value)->exists();
-
-                    if ($exists) {
-                        $fail('Answer key with this name already exists.');
-                    }
-                }
+                new IsExistsRule($user->answerKeys(), 'name')
             ],
             'attachments' => 'required|array',
             'attachments.*' => 'image|max:10240',
@@ -67,7 +66,7 @@ class AnswerKeyController extends Controller
             $attachments = [];
 
             foreach ($request->file('attachments', []) as $file) {
-                $path = $file->store('answer-keys', 'public');
+                $path = $file->store('answer-keys/' . $user->id, 'public');
                 $attachments[] = [
                     'attachment_type' => AnswerKey::class,
                     'attachment_id' => $result->id,
