@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AnswerKeyController;
+use App\Http\Controllers\Api\AnswerSheetController;
 use App\Http\Controllers\Api\SubjectController as ApiSubjectController;
 use App\Http\Controllers\AuthenticationController;
 use App\Http\Controllers\QuickCheckerController;
@@ -16,10 +17,12 @@ Route::middleware('throttle:5,1')
     });
 
 Route::middleware('auth:sanctum')->group(function () {
-    Route::middleware('throttle:10,1')->controller(AuthenticationController::class)->group(function () {
-        Route::get('refresh', 'refresh');
-        Route::get('logout', 'logout');
-    });
+    Route::middleware('throttle:10,1')
+        ->controller(AuthenticationController::class)
+        ->group(function () {
+            Route::get('refresh', 'refresh');
+            Route::get('logout', 'logout');
+        });
 
     Route::post('quick-check', [QuickCheckerController::class, 'quickCheck']);
 
@@ -40,4 +43,12 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('', 'store');
             Route::delete('{answerKey}', 'destroy');
         });
+
+
+    Route::controller(AnswerSheetController::class)->group(function () {
+        Route::post('scan', 'store');
+        Route::prefix('answer-sheets')->group(function () {
+            Route::get('', 'index');
+        });
+    });
 });

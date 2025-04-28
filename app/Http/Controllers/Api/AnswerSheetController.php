@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\AnswerSheetResource;
 use App\Models\AnswerSheet;
 use App\Models\Snapshot;
 use App\Rules\IsExistsRule;
@@ -17,7 +18,14 @@ class AnswerSheetController extends Controller
      */
     public function index()
     {
-        //
+        /** @var User $user */
+        $user = Auth::user();
+        $answerSheets = $user->answerSheets()
+            ->with(['subject'])
+            ->orderBy('eval_at', 'desc')
+            ->orderBy('created_at', 'desc')
+            ->get();
+        return response()->json(AnswerSheetResource::collection($answerSheets));
     }
 
     /**
@@ -74,7 +82,7 @@ class AnswerSheetController extends Controller
 
             DB::commit();
 
-            return response()->json($answerSheet);
+            return response()->json(new AnswerSheetResource($answerSheet));
         } catch (\Exception $e) {
             DB::rollBack();
             return sendErrorResponse($e);
