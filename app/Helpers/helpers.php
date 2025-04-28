@@ -9,7 +9,6 @@ function sendErrorResponse(\Exception $e)
 
 function timeDiffInHumanReadableFormat($datetime)
 {
-    // Return null if the argument is null
     if (is_null($datetime)) {
         return null;
     }
@@ -19,34 +18,29 @@ function timeDiffInHumanReadableFormat($datetime)
         $now = Carbon::now();
         $diffInSeconds = $date->diffInSeconds($now);
 
-        // If the difference is less than or equal to 60 seconds
         if ($diffInSeconds <= 60) {
             return 'just now';
         }
 
-        // If the difference is within 1 minute
-        if ($diffInSeconds <= 60 * 2) {
+        if ($diffInSeconds <= 120) { // 2 minutes = 120 seconds
             return 'a min ago';
         }
 
-        // If the difference is less than 60 minutes (1 hour)
-        if ($diffInSeconds <= 60 * 60) {
+        if ($diffInSeconds <= 3600) { // 60 minutes = 3600 seconds
             $minutes = (int) $date->diffInMinutes($now);
-            return $minutes . ' min ago';
+            return $minutes . ' mins ago';
         }
 
-        // If the difference is less than 24 hours
-        if ($diffInSeconds <= 24 * 60 * 60) {
-            return 'an hour ago';
+        if ($diffInSeconds <= 86400) { // 24 hours = 86400 seconds
+            $hours = (int) $date->diffInHours($now);
+            return $hours === 1 ? 'an hour ago' : $hours . ' hours ago';
         }
 
-        // If the difference is less than 7 days
-        if ($diffInSeconds <= 7 * 24 * 60 * 60) {
-            return $date->format('l'); // Day of the week
+        if ($diffInSeconds <= 7 * 86400) { // 7 days
+            return $date->format('l'); // Day name
         }
 
-        // For dates older than 7 days
-        return $date->format('F d, Y'); // Month Day, Year (e.g., April 01, 2025)
+        return $date->format('F d, Y'); // Full date
     } catch (\Exception $e) {
         return null;
     }
