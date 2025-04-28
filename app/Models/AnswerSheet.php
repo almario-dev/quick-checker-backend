@@ -11,6 +11,7 @@ class AnswerSheet extends Model
 
     protected $fillable = [
         'answer_key_id',
+        'subject_id',
         'student_name',
         'score',
         'context',
