@@ -1,0 +1,107 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Models\AnswerSheet;
+use App\Models\Snapshot;
+use App\Rules\IsExistsRule;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+
+class AnswerSheetController extends Controller
+{
+    /**
+     * Display a listing of the resource.
+     */
+    public function index()
+    {
+        //
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     */
+    public function store(Request $request)
+    {
+        /** @var User $user */
+        $user = Auth::user();
+
+        $request->validate([
+            'student_name' =>  'nullable|string',
+            'ai_check' => 'required|boolean',
+            'answer_key' => [
+                'required_if:ai_check,false',
+                'exists:answer_keys,id',
+                new IsExistsRule($user->answerKeys(), null, false, 'The answer key is not associated with the current account.')
+            ],
+            'subject' => [
+                'required',
+                'exists:subjects,id',
+                new IsExistsRule($user->subjects(), null, false, 'The selected subject isn\'t associated with your account.')
+            ],
+            'documents' => 'required|array',
+            'documents.*' => 'bail|image|max:10240',
+        ], [
+            'answer_key.required_if' => 'You must select an answer key if AI-based evaluation is disabled.',
+        ]);
+
+        DB::beginTransaction();
+
+        try {
+            $answerSheet = $user->answerSheets()->create([
+                'answer_key_id' => $request->answer_key,
+                'subject_id' => $request->subject,
+                'student_name' => $request->student_name,
+                'ai_checked' => $request->ai_check,
+            ]);
+
+            $attachments = [];
+
+            foreach ($request->file('documents', []) as $file) {
+                $path = $file->store('answer-sheets/' . $user->id, 'public');
+                $attachments[] = [
+                    'attachment_type' => AnswerSheet::class,
+                    'attachment_id' => $answerSheet->id,
+                    'path' => $path,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ];
+            }
+
+            Snapshot::insert($attachments);
+
+            DB::commit();
+
+            return response()->json($answerSheet);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return sendErrorResponse($e);
+        }
+    }
+
+    /**
+     * Display the specified resource.
+     */
+    public function show(AnswerSheet $answerSheet)
+    {
+        //
+    }
+
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(Request $request, AnswerSheet $answerSheet)
+    {
+        //
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy(AnswerSheet $answerSheet)
+    {
+        //
+    }
+}
