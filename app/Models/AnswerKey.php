@@ -34,6 +34,7 @@ class AnswerKey extends Model
             'subject' => $this->subject->basicResource(),
             'mode' => $this->mode,
             'score' => $this->score,
+            'scans' => $this->answerSheets()->count(),
         ];
     }
 

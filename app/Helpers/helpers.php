@@ -22,25 +22,29 @@ function timeDiffInHumanReadableFormat($datetime)
             return 'just now';
         }
 
-        if ($diffInSeconds <= 120) { // 2 minutes = 120 seconds
+        if ($diffInSeconds <= 120) { // 2 minutes
             return 'a min ago';
         }
 
-        if ($diffInSeconds <= 3600) { // 60 minutes = 3600 seconds
+        if ($diffInSeconds <= 3600) { // up to 1 hour
             $minutes = (int) $date->diffInMinutes($now);
             return $minutes . ' mins ago';
         }
 
-        if ($diffInSeconds <= 86400) { // 24 hours = 86400 seconds
+        if ($diffInSeconds <= 86400) { // up to 24 hours
             $hours = (int) $date->diffInHours($now);
             return $hours === 1 ? 'an hour ago' : $hours . ' hours ago';
         }
 
-        if ($diffInSeconds <= 7 * 86400) { // 7 days
-            return $date->format('l'); // Day name
+        if ($diffInSeconds <= 2 * 86400) { // 24–48 hours
+            return 'yesterday';
         }
 
-        return $date->format('F d, Y'); // Full date
+        if ($diffInSeconds <= 7 * 86400) { // within this week
+            return 'last ' . strtolower($date->format('l')); // e.g. "Monday"
+        }
+
+        return $date->format('F d, Y'); // e.g. "April 29, 2025"
     } catch (\Exception $e) {
         return null;
     }

@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\AnswerSheetController;
 use App\Http\Controllers\Api\SubjectController as ApiSubjectController;
 use App\Http\Controllers\AuthenticationController;
 use App\Http\Controllers\QuickCheckerController;
+use App\Http\Controllers\UserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -44,11 +45,17 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::delete('{answerKey}', 'destroy');
         });
 
-
     Route::controller(AnswerSheetController::class)->group(function () {
         Route::post('scan', 'store');
         Route::prefix('answer-sheets')->group(function () {
             Route::get('', 'index');
         });
     });
+
+    Route::prefix('user')
+        ->controller(UserController::class)
+        ->group(function () {
+            Route::post('change-name', 'changeName');
+            Route::post('change-password', 'changePassword');
+        });
 });
