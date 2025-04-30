@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Resources\BasicUserResource;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
@@ -62,9 +63,14 @@ class AuthRequest extends FormRequest
     {
         try {
             $token = $this->tokenize();
+
+            /** @var User $user */
             $user = Auth::user();
 
-            return response()->json($user)->header('Resource-ID', $token);
+            return response()->json([
+                'user' => new BasicUserResource($user),
+                'config' => $user->getConfigs(),
+            ])->header('Resource-ID', $token);
         } catch (\Exception $e) {
             return response()->json($e->getMessage(), $e->getCode() ?? 500);
         }
