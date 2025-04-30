@@ -48,8 +48,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::controller(AnswerSheetController::class)->group(function () {
         Route::post('scan', 'store');
+
         Route::prefix('answer-sheets')->group(function () {
             Route::get('', 'index');
+            Route::get('{answerSheet}/info', 'info');
         });
     });
 

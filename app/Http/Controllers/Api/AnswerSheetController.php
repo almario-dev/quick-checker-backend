@@ -112,4 +112,13 @@ class AnswerSheetController extends Controller
     {
         //
     }
+
+    public function info(AnswerSheet $answerSheet)
+    {
+        $snapshots = $answerSheet->attachments;
+
+        return response()->json([
+            'documents' => $snapshots,
+        ]);
+    }
 }
