@@ -4,7 +4,9 @@ use Carbon\Carbon;
 
 function sendErrorResponse(\Exception $e)
 {
-    return response()->json(['error' => $e->getMessage()], $e->getCode() ?? 500);
+    $code = (int) $e->getCode();
+    $status = ($code >= 100 && $code <= 599) ? $code : 500;
+    return response()->json(['error' => $e->getMessage()], $status);
 }
 
 function timeDiffInHumanReadableFormat($datetime)
@@ -47,5 +49,16 @@ function timeDiffInHumanReadableFormat($datetime)
         return $date->format('F d, Y'); // e.g. "April 29, 2025"
     } catch (\Exception $e) {
         return null;
+    }
+}
+
+function extractImage($file): string
+{
+    try {
+        $fileContent = base64_encode(file_get_contents($file));
+        $mimeType = $file->getMimeType();
+        return "data:$mimeType;base64,$fileContent";
+    } catch (\Exception $e) {
+        throw $e;
     }
 }
