@@ -8,6 +8,7 @@ use App\Models\AnswerKey;
 use App\Models\Snapshot;
 use App\Models\User;
 use App\Rules\IsExistsRule;
+use App\Services\OpenAIService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -56,11 +57,19 @@ class AnswerKeyController extends Controller
         DB::beginTransaction();
 
         try {
+            $openai = app(OpenAIService::class);
+            $aiResult = $openai->scanAnswerKey($request->file('attachments', []));
+            $json = json_decode($aiResult, true);
+
+            $score = array_sum(array_column($json, 'points') ?? []);
 
             $result = $user->answerKeys()->create([
                 'name' => $request->name,
                 'subject_id' => $request->subject,
                 'mode' => $request->useQuestionnaire ? 'USE_QUESTIONNAIRE' : 'ENFORCE_KEY',
+                'context' => $json,
+                'eval_at' => now(),
+                'score' => $score ?? null,
             ]);
 
             $attachments = [];

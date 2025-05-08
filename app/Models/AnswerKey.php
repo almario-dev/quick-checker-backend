@@ -24,6 +24,7 @@ class AnswerKey extends Model
         'eval_at' => 'datetime',
         'score' => 'double',
         'metadata' => 'array',
+        'context' => 'array',
     ];
 
     public function basic(): array
