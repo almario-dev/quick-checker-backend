@@ -1,0 +1,32 @@
+name: Main API CI/CD
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install sshpass
+        run: sudo apt-get update && sudo apt-get install -y sshpass
+
+      - name: Deploy via SSH using sshpass
+        run: |
+          sshpass -p "${{ secrets.HOSTING_PASSWORD }}" ssh -o StrictHostKeyChecking=no -p ${{ secrets.HOSTING_PORT }} ${{ secrets.HOSTING_USER }}@${{ secrets.HOSTING_HOST }} << 'EOF'
+            set -e
+            cd ${{ HOSTING_PATH }}
+            git checkout main
+            git pull
+            composer2 install --no-interaction --prefer-dist --optimize-autoloader
+            php artisan migrate --force
+            php artisan cache:clear
+            php artisan config:clear
+            php artisan route:clear
+            php artisan view:clear
+          EOF
