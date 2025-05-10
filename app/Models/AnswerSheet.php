@@ -18,6 +18,7 @@ class AnswerSheet extends Model
         'metadata',
         'ai_checked',
         'eval_at',
+        'eval_status',
     ];
 
     protected $casts = [
@@ -25,6 +26,7 @@ class AnswerSheet extends Model
         'metadata' => 'array',
         'ai_checked' => 'boolean',
         'eval_at' => 'datetime',
+        'context' => 'array',
     ];
 
     public function owner()
