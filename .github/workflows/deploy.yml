@@ -21,7 +21,7 @@ jobs:
         run: |
           sshpass -p "${{ secrets.HOSTING_PASSWORD }}" ssh -o StrictHostKeyChecking=no -p ${{ secrets.HOSTING_PORT }} ${{ secrets.HOSTING_USER }}@${{ secrets.HOSTING_HOST }} << 'EOF'
             set -e
-            cd "${{ HOSTING_PATH}"
+            cd "${{ HOSTING_PATH }}"
             git checkout main
             git pull
             composer2 install --no-interaction --prefer-dist --optimize-autoloader
