@@ -18,7 +18,7 @@ class AnswerSheetResource extends JsonResource
             'id' => $this->id,
             'student_name' => $this->student_name,
             'subject' => $this->subject->basicResource(),
-            'answer_key' => $this->answer_key_id,
+            'answer_key' => (int) $this->answer_key_id,
             'score' => $this->score,
             'ai_checked' => $this->ai_checked,
             'eval_at' => $this->eval_at?->format('M d, Y - g:i A') ?? null,

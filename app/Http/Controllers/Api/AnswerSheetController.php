@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\AnswerSheetResource;
+use App\Models\AnswerKey;
 use App\Models\AnswerSheet;
 use App\Models\Snapshot;
 use App\Rules\IsExistsRule;
+use App\Services\OpenAIService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -82,7 +84,38 @@ class AnswerSheetController extends Controller
 
             DB::commit();
 
-            return response()->json(new AnswerSheetResource($answerSheet));
+            $result = new AnswerSheetResource($answerSheet);
+            $status = null;
+            try {
+                $answerSheet->eval_at = now();
+                $answerKey = AnswerKey::findOrFail($request->answer_key);
+                $openai = app(OpenAIService::class);
+
+                $aiResult = null;
+
+                if ($request->ai_checked) {
+                    $aiResult = $openai->evaluateAnswerSheets($request->file('documents', []), json_encode($answerKey->context));
+                } else {
+                    $aiResult = $openai->evaluateAnswerSheetsWithoutKey($request->file('documents', []));
+                }
+
+                $json = json_decode($aiResult, true);
+
+                $answerSheet->eval_status = 'success';
+                $answerSheet->context = $json;
+                $answerSheet->score =  $json['total_points_acquired'] ?? null;
+                $status = 'success';
+            } catch (\Exception $e) {
+                $status = $e->getMessage();
+                $answerSheet->eval_status = 'fail';
+            }
+
+            $answerSheet->save();
+
+            return response()->json([
+                ...$result->toArray($request),
+                'eval_status' => $status
+            ]);
         } catch (\Exception $e) {
             DB::rollBack();
             return sendErrorResponse($e);
