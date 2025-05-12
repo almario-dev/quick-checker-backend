@@ -41,8 +41,10 @@ Route::middleware('auth:sanctum')->group(function () {
         ->controller(AnswerKeyController::class)
         ->group(function () {
             Route::get('', 'index');
-            Route::get('{answerKey}/full-details', 'fullDetails');
             Route::post('', 'store');
+            Route::get('{answerKey}/full-details', 'fullDetails');
+            Route::put('{answerKey}', 'reanalyze');
+            Route::post('{answerKey}', 'update');
             Route::delete('{answerKey}', 'destroy');
         });
 

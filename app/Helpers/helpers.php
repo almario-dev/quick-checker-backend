@@ -1,6 +1,7 @@
 <?php
 
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Storage;
 
 function sendErrorResponse(\Exception $e)
 {
@@ -52,10 +53,10 @@ function timeDiffInHumanReadableFormat($datetime)
     }
 }
 
-function extractImage($file): string
+function extractImage($file, $isPath = false): string
 {
     try {
-        $fileContent = base64_encode(file_get_contents($file));
+        $fileContent = base64_encode(!$isPath ? file_get_contents($file) : Storage::get($file));
         $mimeType = $file->getMimeType();
         return "data:$mimeType;base64,$fileContent";
     } catch (\Exception $e) {

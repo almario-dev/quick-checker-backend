@@ -12,12 +12,15 @@ class IsExistsRule implements ValidationRule
     protected bool $errWhen;
     protected ?string $err;
 
-    public function __construct(mixed $query, ?string $column = null, bool $errWhen = true, ?string $err = null)
+    protected $interceptor;
+
+    public function __construct(mixed $query, ?string $column = null, bool $errWhen = true, ?string $err = null, $interceptor = null)
     {
         $this->query = $query;
         $this->column = $column;
         $this->errWhen = $errWhen;
         $this->err = $err;
+        $this->interceptor = $interceptor;
     }
 
     /**
@@ -31,6 +34,10 @@ class IsExistsRule implements ValidationRule
 
         if ($this->column !== null) {
             $q = $q->where($this->column, $value);
+        }
+
+        if (is_callable($this->interceptor)) {
+            call_user_func($this->interceptor, $q);
         }
 
         $result = $q->exists();

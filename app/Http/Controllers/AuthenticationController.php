@@ -17,9 +17,11 @@ class AuthenticationController extends Controller
             'password' => 'required|min:8|confirmed'
         ]);
 
-        User::create($validated);
+        $user = User::create($validated);
 
-        return response()->json(['message' => 'You have successfully created your account!'], 201);
+        Auth::loginUsingId($user->id);
+
+        return $request->sendCurrentUser();
     }
 
     public function login(AuthRequest $request)

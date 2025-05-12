@@ -2,7 +2,11 @@
 
 namespace App\Services;
 
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
 use OpenAI\Laravel\Facades\OpenAI;
+
+define("INVALID", "/err_invalid/");
 
 class OpenAIService
 {
@@ -23,72 +27,32 @@ class OpenAIService
         ]);
     }
 
-    public function scanAnswerKey($answerKeys)
+    public function scanAnswerKey($answerKeys, $isPath = false)
     {
         try {
+            $promptContent = Cache::remember('answer-key-extraction-tool', 60, function () {
+                return Storage::get('private/prompts/answer-key-extraction-tool.txt');
+            });
+
             $result = $this->prompt(
-                array_map(fn($a) => [
-                    'type' => 'image_url',
-                    'image_url' => [
-                        'url' => extractImage($a),
-                    ],
-                ], $answerKeys),
-                <<<EOD
-                    You are a precise data extraction AI designed to process scanned answer keys or handwritten documents. Your only task is to extract a structured dataset of test items, correct answers, and maximum points per item. If no images are provided, return the message "No input provided".
-
-                    Input: One or more scanned images
-                    Output: A JSON-encoded plain text/string of the result dataset or a plain "err_invalid_document" message
-
-                    Output Format:
+                [
                     [
-                        {
-                            "name": "Sample test",
-                            "points": 10,
-                            "keys": [
-                            {
-                                "item": "Test item number or description",
-                                "key": "Correct answer (include letter and description if multiple choice)",
-                                "points": 1
-                            }
-                            ...
-                            ]
-                        }
-                    ]
-
-                    Strict Rules:
-
-                    All input images must contain valid answer key content.
-
-                    If any one image is not a valid answer key, return:
-                    "err_invalid_document" and skip the entire process.
-
-                    If the test items continue across multiple images, extract them sequentially and combine into a single list under one test.
-
-                    A valid answer key may contain:
-
-                    Numbered answers
-
-                    Encircled or clearly marked choices
-
-                    Typed or handwritten formats
-
-                    Include both the letter and description for multiple-choice answers (e.g., "B. Gravity").
-
-                    Default points per item to 1 if unspecified.
-
-                    points must be a number, not a string.
-
-                    Compute "points" in the root object by summing item points.
-
-                    Output only clean JSON or "err_invalid_document" — no extra text.
-
-                    Return the JSON output as plain text without markdown or code formatting, no whitespace - pure json-encoded string only.
-                EOD
+                        'type' => 'text',
+                        'text' => "Scan these images for answer key"
+                    ],
+                    ...array_map(fn($a) => [
+                        'type' => 'image_url',
+                        'image_url' => [
+                            'url' => extractImage($a, $isPath),
+                        ],
+                    ], $answerKeys),
+                ],
+                $promptContent,
             );
 
             $content = $result['choices'][0]['message']['content'];
 
-            if (preg_match("/err_invalid_document/", $content)) {
+            if (preg_match(INVALID, $content)) {
                 throw new \Exception('Invalid document.', 500);
             }
 
@@ -109,7 +73,7 @@ class OpenAIService
                     ],
                     [
                         'type' => 'text',
-                        'text' => "The answer sheets you are to check are the following images..."
+                        'text' => "to evaluate the results of this test image(s)..."
                     ],
                     ...array_map(fn($a) => [
                         'type' => 'image_url',
@@ -119,101 +83,115 @@ class OpenAIService
                     ], $answerSheets)
                 ],
                 <<<EOD
-                    You are an answer sheet evaluator AI that processes scanned answer sheets (typed or handwritten) and compares the responses against a provided answer key in JSON format. If no images are provided, return the message "err_invalid_document".
+                    You are test checker tool with only one specific job: to check answer sheets with a predefined answer key dataset.
 
-                    Input:
-                    One or more scanned images of answer sheet/test.
-                    A JSON string representing the answer key dataset.
+                    You will receive one or more images per request. Process them sequentially and merge data across pages if needed.
 
-                    Output:
-                    A JSON-encoded plain text string containing the student's answers, item-level evaluation, and total score, or a plain "err_invalid_document" message.
+                    You will also receive the json-encoded string as the answer key, use this to achieve the final score of the test.
 
-                    What you need to do:
-
-                    Extract the item numbers and the corresponding answer from the image(s).  (If answer is not clear, set it as blank/empty)
-
-                    After the data is extracted, compare it to the JSON string (answer key).
-
-                    Use the answer key dataset as the basis of your input.
-
-                    For example:
-
-                    Answer key is [{"name":"Test A","points":5,"keys":[{"item":"1","key":"B","points":1},{"item":"2","key":"A","points":1},{"item":"3","key":"C","points":1},{"item":"4","key":"D","points":1},{"item":"5","key":"D","points":1}]}]
-
-                    Your output will be:
+                    Expected, the answer key is sent with the following format:
                     {
-                    "total_points_acquired": 1,
-                    "tests": [
-                        {
-                        "name": "Test A",
-                        "score": 1,
-                        "max_points": 5,
-                        "results": [
+                        "total_points": 10,
+                        "tests": [
                             {
-                                "item": "1",
-                                "answer": "C",
-                                "key": "B",
-                                "correct": false,
-                                "points_awarded": 0,
-                                "points_possible": 1
+                                "title": "Test A",
+                                "max_points": 5,
+                                "items": [
+                                    {
+                                        "item_number": 1,
+                                        "description": "What is the sound of dog?",
+                                        "key": "A. Aw aw!",
+                                        "points": 1
+                                    }
+                                    ...
+                                ]
                             },
                             {
-                                "item": "2",
-                                "answer": "A",
-                                "key": "A",
-                                "correct": true,
-                                "points_awarded": 1,
-                                "points_possible": 1
-                            },
-                            {
-                                "item": "3",
-                                "answer": "D",
-                                "key": "C",
-                                "correct": false,
-                                "points_awarded": 0,
-                                "points_possible": 1
-                            },
-                            {
-                                "item": "4",
-                                "answer": "B",
-                                "key": "D",
-                                "correct": false,
-                                "points_awarded": 0,
-                                "points_possible": 1
-                            },
-                            {
-                                "item": "5",
-                                "answer": "A",
-                                "key": "D",
-                                "correct": false,
-                                "points_awarded": 0,
-                                "points_possible": 1
+                            "title": "Test B",
+                            "max_points": 5,
+                            "items": [
+                                    {
+                                        "item_number": 1,
+                                        "description": "What is 4 + 2",
+                                        "key": 6,
+                                        "points": 1
+                                    }
+                                    ...
+                                ]
                             }
                         ]
-                        }
-                    ]
                     }
 
-                    Return the output as a compact, clean JSON-encoded string — no markdown, no formatting, no extra text.
+                    Which, you will follow this structure to create your own output: Refer to this example:
+                    {
+                        "total_points_acquired": 7,
+                        "tests": [
+                            {
+                                "title": "Test A",
+                                "points_acquired": 2,
+                                "items": [
+                                    {
+                                        "item_number": 1,
+                                        "answer": "A. Aw aw!",
+                                        "points": 1,
+                                        "points_given": 0,
+                                        "is_correct": false,
+                                    }
+                                    ...
+                                ]
+                            },
+                            {
+                            "title": "Test B",
+                            "max_points": 5,
+                            "items": [
+                                    {
+                                        "item_number": 1,
+                                        "description": "What is 4 + 2",
+                                        "answer": 6,
+                                        "points": 1
+                                        "points_given": 1,
+                                        "is_correct": true,
+                                    }
+                                    ...
+                                ]
+                            }
+                        ]
+                    }
 
-                    Strict Rules:
+                    Notes:
 
-                    If no image is provided, return "err_invalid_document".
+                        If an image is unrecognizable or not a test/exam document, or you're not able to extract data, respond with the string:
+                        "err_invalid".
 
-                    If any image is not a valid answer sheet, return "err_invalid_document" and skip the entire process.
+                        The documents may include plain answers only; use it directly to get a finalized score.
 
-                    Strictly compare the items (item number).
+                        Extract the item_number which is unique within its own test object. Compare the provided answer to the corresponding key or correct answer from the answer key.
 
-                    If the answer sheet data misses an item from the answer key, record it as 0 or incorrect.
+                        Perform OCR to extract text, and ensure accuracy even with handwritten content.
 
-                    Return the JSON output as plain text without markdown or code formatting, no whitespace - pure json-encoded string only.
+                        Maintain the order of tests and items as presented in the answer key data.
 
+                        Answers may be indicated using highlights, checkmarks, underlines, or color—all are valid indicators.
+
+                        If there are multiple correct answers possible, evaluate the given answer if it is correct/existing in the "key".
+
+                        If an answer is unclear, missing, or conflicting, set points to 0.
+
+                        Follow the answer key points allocation.
+
+                        is_correct is always false if there is no points_given.
+
+                        total_points_acquired is the total points_given from all the tests.
+
+                        points_acquired is the total points_given in a specific test.
+
+                        Send only the json-encoded plain text string (no whitespace) output.
                 EOD
             );
 
             $content = $result['choices'][0]['message']['content'];
 
-            if (preg_match("/err_invalid_document/", $content)) {
+            if (preg_match("/err_invalid/", $content)) {
                 throw new \Exception('Invalid document.', 500);
             }
 

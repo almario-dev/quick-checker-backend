@@ -20,8 +20,8 @@ class AnswerKeyFullResource extends JsonResource
             'mode' => $this->mode,
             'context' => $this->context,
             'metadata' => $this->metadata,
-            'snapshots' => $this->attachments,
-            'eval_at' => $this->eval_at?->format('M d, Y - g:i A') ?? null,
+            'documents' => $this->attachments,
+            'evalAt' => $this->eval_at?->format('M d, Y - g:i A') ?? null,
             'subject' => $this->subject->basicResource(),
         ];
     }

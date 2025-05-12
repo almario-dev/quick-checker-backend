@@ -16,13 +16,13 @@ class AnswerSheetResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'student_name' => $this->student_name,
+            'studentName' => $this->student_name,
             'subject' => $this->subject->basicResource(),
-            'answer_key' => (int) $this->answer_key_id,
+            'answerKey' => (int) $this->answer_key_id,
+            'aiChecked' => $this->ai_checked,
             'score' => $this->score,
-            'ai_checked' => $this->ai_checked,
-            'eval_at' => $this->eval_at?->format('M d, Y - g:i A') ?? null,
-            'created_at' => timeDiffInHumanReadableFormat($this->created_at)
+            'evalAt' => $this->eval_at?->format('M d, Y - g:i A') ?? null,
+            'createdAt' => timeDiffInHumanReadableFormat($this->created_at)
         ];
     }
 }

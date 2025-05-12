@@ -36,7 +36,7 @@ class AnswerSheet extends Model
 
     public function answerKey()
     {
-        return $this->belongsTo(AnswerKey::class);
+        return $this->belongsTo(AnswerKey::class)->withTrashed();
     }
 
     public function attachments()
@@ -46,6 +46,6 @@ class AnswerSheet extends Model
 
     public function subject()
     {
-        return $this->belongsTo(Subject::class);
+        return $this->belongsTo(Subject::class)->withTrashed();
     }
 }
