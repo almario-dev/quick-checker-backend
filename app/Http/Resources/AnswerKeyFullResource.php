@@ -21,6 +21,7 @@ class AnswerKeyFullResource extends JsonResource
             'context' => $this->context,
             'metadata' => $this->metadata,
             'documents' => $this->attachments,
+            'score' => $this->score,
             'evalAt' => $this->eval_at?->format('M d, Y - g:i A') ?? null,
             'subject' => $this->subject->basicResource(),
         ];
