@@ -103,7 +103,7 @@ class AnswerSheetController extends Controller
 
                 $answerSheet->eval_status = 'success';
                 $answerSheet->context = $json;
-                $answerSheet->score =  $json['total_points_acquired'] ?? null;
+                $answerSheet->score =  $json['score'] ?? null;
                 $status = 'success';
             } catch (\Exception $e) {
                 $status = $e->getMessage();
