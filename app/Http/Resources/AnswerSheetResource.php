@@ -20,6 +20,7 @@ class AnswerSheetResource extends JsonResource
             'subject' => $this->subject->basicResource(),
             'answerKey' => (int) $this->answer_key_id,
             'aiChecked' => $this->ai_checked,
+            'evalStatus' => $this->eval_status,
             'score' => $this->score,
             'evalAt' => $this->eval_at?->format('M d, Y - g:i A') ?? null,
             'createdAt' => timeDiffInHumanReadableFormat($this->created_at)
