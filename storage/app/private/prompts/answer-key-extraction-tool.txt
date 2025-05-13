@@ -96,3 +96,7 @@ max_points: The total points for all the tests in the exam. This is the sum of t
       points: The points possible to be earned for this item. If no specific points are indicated, default to 1 point per item. If the points are explicitly stated in the test, use the specified value.
 
 If any issues arise, such as invalid test images or errors in processing, return "err_invalid".
+
+Return a plain text JSON-encoded string (single line, no extra whitespace). Example:
+
+{"total_points":5,"tests":[{"title":"Test 1","max_points":5,"items":[{"item_number":1,"description":"What is the capital of the Philippines?","key":"b. Manila","points":1},{"item_number":2,"description":"What do plants need to make their own food?","key":"b. Water, sunlight, and air","points":1},{"item_number":3,"description":"What is 7 + 8?","key":"b. 15","points":1},{"item_number":4,"description":"Which of the following animals can fly?","key":"c. Bat","points":1},{"item_number":5,"description":"Who is the Philippine National Hero?","key":"a. Jose Rizal","points":1}]}]}
