@@ -56,9 +56,16 @@ function timeDiffInHumanReadableFormat($datetime)
 function extractImage($file, $isPath = false): string
 {
     try {
-        $fileContent = base64_encode(!$isPath ? file_get_contents($file) : Storage::get($file));
-        $mimeType = $file->getMimeType();
-        return "data:$mimeType;base64,$fileContent";
+        if ($isPath) {
+            $fileContent = Storage::get($file);
+            $absolutePath = Storage::path($file);
+            $mimeType = mime_content_type($absolutePath);
+        } else {
+            $fileContent = file_get_contents($file);
+            $mimeType = $file->getMimeType(); // works if $file is an UploadedFile
+        }
+
+        return "data:$mimeType;base64," . base64_encode($fileContent);
     } catch (\Exception $e) {
         throw $e;
     }
