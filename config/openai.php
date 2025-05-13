@@ -26,5 +26,5 @@ return [
 
     'request_timeout' => env('OPENAI_REQUEST_TIMEOUT', 30),
 
-    'model' => 'gpt-4o-mini',
+    'model' => 'gpt-4.1',
 ];
