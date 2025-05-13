@@ -31,7 +31,7 @@ class OpenAIService
     {
         try {
             $promptContent = Cache::remember('answer-key-extraction-tool', 60, function () {
-                return Storage::get('private/prompts/answer-key-extraction-tool.txt');
+                return Storage::disk('local')->get('prompts/answer-key-extraction-tool.txt');
             });
 
             $result = $this->prompt(
