@@ -12,6 +12,7 @@ use App\Services\OpenAIService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class AnswerKeyController extends Controller
 {
@@ -61,7 +62,7 @@ class AnswerKeyController extends Controller
             $aiResult = $openai->scanAnswerKey($request->file('attachments', []));
             $json = json_decode($aiResult, true);
 
-            $score = array_sum(array_column($json, 'max_points') ?? []);
+            $score = array_sum(array_column($json['tests'], 'max_points') ?? []);
 
             $result = $user->answerKeys()->create([
                 'name' => $request->name,
@@ -191,16 +192,15 @@ class AnswerKeyController extends Controller
     public function reanalyze(AnswerKey $answerKey)
     {
         try {
-            $attachments = array_column(
-                $answerKey->attachments()->get('path')->toArray(),
-                'path'
-            );
+            $attachments = $answerKey->attachments->map(function ($attachment) {
+                return $attachment->getAttributes()['path'];
+            })->all();
 
             $openai = app(OpenAIService::class);
             $aiResult = $openai->scanAnswerKey($attachments ?? [], true);
             $json = json_decode($aiResult, true);
 
-            $score = array_sum(array_column($json, 'max_points') ?? []);
+            $score = array_sum(array_column($json['tests'], 'max_points') ?? []);
 
             $answerKey->update([
                 'score' => $score,
