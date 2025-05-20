@@ -87,23 +87,23 @@ class AnswerSheetController extends Controller
             $result = new AnswerSheetResource($answerSheet);
             $status = null;
             try {
-                $answerSheet->eval_at = now();
+                $aiResult = null;
                 $answerKey = AnswerKey::findOrFail($request->answer_key);
                 $openai = app(OpenAIService::class);
 
-                $aiResult = null;
+                $answerSheet->eval_at = now();
 
-                if ($request->ai_checked) {
-                    $aiResult = $openai->evaluateAnswerSheets($request->file('documents', []), json_encode($answerKey->context));
-                } else {
-                    $aiResult = $openai->evaluateAnswerSheetsWithoutKey($request->file('documents', []));
-                }
+                $aiResult = $openai->evaluateAnswerSheets($request->file('documents', []), json_encode($answerKey->context));
+                // if ($request->ai_checked) {
+                // } else {
+                //     $aiResult = $openai->evaluateAnswerSheetsWithoutKey($request->file('documents', []));
+                // }
 
                 $json = json_decode($aiResult, true);
 
                 $answerSheet->eval_status = 'success';
                 $answerSheet->context = $json;
-                $answerSheet->score =  $json['score'] ?? null;
+                $answerSheet->score =  $json['total_points'] ?? null;
                 $status = 'success';
             } catch (\Exception $e) {
                 $status = $e->getMessage();
@@ -152,6 +152,7 @@ class AnswerSheetController extends Controller
 
         return response()->json([
             'documents' => $snapshots,
+            'context' => $answerSheet->context,
         ]);
     }
 }

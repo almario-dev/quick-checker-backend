@@ -62,9 +62,13 @@ class OpenAIService
         }
     }
 
-    public function evaluateAnswerSheets($answerSheets, $answerKeyContext)
+    public function evaluateAnswerSheets($answerSheets, $answerKeyContext, $isPath = false)
     {
         try {
+            $promptContent = Cache::remember('answer-sheet-evaluation-with-enforced-key', 60, function () {
+                return Storage::disk('local')->get('prompts/answer-sheet-evaluation-with-enforced-key.txt');
+            });
+
             $result = $this->prompt(
                 [
                     [
@@ -73,120 +77,16 @@ class OpenAIService
                     ],
                     [
                         'type' => 'text',
-                        'text' => "to evaluate the results of this test image(s)..."
+                        'text' => "to evaluate the results of this answer sheets(s)..."
                     ],
                     ...array_map(fn($a) => [
                         'type' => 'image_url',
                         'image_url' => [
-                            'url' => extractImage($a),
+                            'url' => extractImage($a, $isPath),
                         ],
                     ], $answerSheets)
                 ],
-                <<<EOD
-                    You are test checker tool with only one specific job: to check answer sheets with a predefined answer key dataset.
-
-                    You will receive one or more images per request. Process them sequentially and merge data across pages if needed.
-
-                    You will also receive the json-encoded string as the answer key, use this to achieve the final score of the test.
-
-                    Expected, the answer key is sent with the following format:
-                    {
-                        "total_points": 10,
-                        "tests": [
-                            {
-                                "title": "Test A",
-                                "max_points": 5,
-                                "items": [
-                                    {
-                                        "item_number": 1,
-                                        "description": "What is the sound of dog?",
-                                        "key": "A. Aw aw!",
-                                        "points": 1
-                                    }
-                                    ...
-                                ]
-                            },
-                            {
-                            "title": "Test B",
-                            "max_points": 5,
-                            "items": [
-                                    {
-                                        "item_number": 1,
-                                        "description": "What is 4 + 2",
-                                        "key": 6,
-                                        "points": 1
-                                    }
-                                    ...
-                                ]
-                            }
-                        ]
-                    }
-
-                    Which, you will follow this structure to create your own output: Refer to this example:
-                    {
-                        "total_points_acquired": 7,
-                        "tests": [
-                            {
-                                "title": "Test A",
-                                "points_acquired": 2,
-                                "items": [
-                                    {
-                                        "item_number": 1,
-                                        "answer": "A. Aw aw!",
-                                        "points": 1,
-                                        "points_given": 0,
-                                        "is_correct": false,
-                                    }
-                                    ...
-                                ]
-                            },
-                            {
-                            "title": "Test B",
-                            "max_points": 5,
-                            "items": [
-                                    {
-                                        "item_number": 1,
-                                        "description": "What is 4 + 2",
-                                        "answer": 6,
-                                        "points": 1
-                                        "points_given": 1,
-                                        "is_correct": true,
-                                    }
-                                    ...
-                                ]
-                            }
-                        ]
-                    }
-
-                    Notes:
-
-                        If an image is unrecognizable or not a test/exam document, or you're not able to extract data, respond with the string:
-                        "err_invalid".
-
-                        The documents may include plain answers only; use it directly to get a finalized score.
-
-                        Extract the item_number which is unique within its own test object. Compare the provided answer to the corresponding key or correct answer from the answer key.
-
-                        Perform OCR to extract text, and ensure accuracy even with handwritten content.
-
-                        Maintain the order of tests and items as presented in the answer key data.
-
-                        Answers may be indicated using highlights, checkmarks, underlines, or color—all are valid indicators.
-
-                        If there are multiple correct answers possible, evaluate the given answer if it is correct/existing in the "key".
-
-                        If an answer is unclear, missing, or conflicting, set points to 0.
-
-                        Follow the answer key points allocation.
-
-                        is_correct is always false if there is no points_given.
-
-                        total_points_acquired is the total points_given from all the tests.
-
-                        points_acquired is the total points_given in a specific test.
-
-                        Send only the json-encoded plain text string (no whitespace) output.
-                EOD
+                $promptContent
             );
 
             $content = $result['choices'][0]['message']['content'];
