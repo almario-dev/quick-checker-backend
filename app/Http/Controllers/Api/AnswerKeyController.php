@@ -130,9 +130,10 @@ class AnswerKeyController extends Controller
                 'string',
                 new IsExistsRule($user->answerKeys(), 'name', true, null, fn($q) => $q->whereNot('id', $answerKey->id))
             ],
-            'attachments' => 'required_without:existing_paths|array',
-            'existing_paths' => 'required_without:attachments|array',
+            'attachments' => 'required_without:existing_paths|array|nullable',
+            'existing_paths' => 'required_without:attachments|array|nullable',
             'attachments.*' => 'image|max:10240',
+            'context' => 'required|string',
         ]);
 
         DB::beginTransaction();
@@ -140,9 +141,14 @@ class AnswerKeyController extends Controller
         try {
             $answerKey->subject_id = $request->subject;
             $answerKey->name = $request->name;
+            $answerKey->context = json_decode($request->context, true);
 
             // sync the existing old snapshots
-            $answerKey->attachments()->whereNotIn('id', $request->existing_paths)->delete();
+            if (count($request->existing_paths ?? []) > 0) {
+                $answerKey->attachments()->whereNotIn('id', $request->existing_paths)->delete();
+            } else {
+                $answerKey->attachments()->delete();
+            }
 
             $attachments = [];
             // upload new snapshots
@@ -157,7 +163,9 @@ class AnswerKeyController extends Controller
                 ];
             }
 
-            Snapshot::insert($attachments);
+            if (count($attachments) > 0) {
+                Snapshot::insert($attachments);
+            }
 
             $answerKey->save();
 
